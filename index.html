@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
       --vk-blue-dark: #0a1628;
@@ -95,6 +96,11 @@
       font-weight: 500;
     }
 
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
     /* Upload Zone */
     .upload-zone {
       background: var(--vk-blue-medium);
@@ -175,7 +181,7 @@
     /* Summary Cards */
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
       margin-bottom: 32px;
     }
@@ -196,7 +202,7 @@
     }
 
     .summary-card-value {
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 700;
     }
 
@@ -210,6 +216,10 @@
 
     .summary-card-value.balance {
       color: var(--vk-blue-accent);
+    }
+
+    .summary-card-value.neutral {
+      color: var(--vk-gray-300);
     }
 
     /* Charts Section */
@@ -261,6 +271,8 @@
       align-items: center;
       padding: 20px 24px;
       border-bottom: 1px solid rgba(255,255,255,0.05);
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
     .table-title {
@@ -271,6 +283,7 @@
     .table-filters {
       display: flex;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
     .filter-select {
@@ -315,6 +328,10 @@
       background: rgba(255,255,255,0.02);
     }
 
+    .transactions-table tr.ignored {
+      opacity: 0.4;
+    }
+
     .amount-positive {
       color: var(--vk-green);
       font-weight: 600;
@@ -325,15 +342,10 @@
       font-weight: 600;
     }
 
-    .category-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-      background: var(--vk-blue-light);
+    .amount-ignored {
+      color: var(--vk-gray-500);
+      font-weight: 600;
+      text-decoration: line-through;
     }
 
     .category-select {
@@ -345,11 +357,15 @@
       font-family: inherit;
       font-size: 12px;
       cursor: pointer;
-      min-width: 140px;
+      min-width: 150px;
     }
 
     .category-select:hover {
       border-color: var(--vk-blue-accent);
+    }
+
+    .category-select.ignored {
+      color: var(--vk-gray-500);
     }
 
     /* Categories Manager */
@@ -361,17 +377,34 @@
       border: 1px solid rgba(255,255,255,0.05);
     }
 
+    .categories-section {
+      margin-bottom: 32px;
+    }
+
+    .categories-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--vk-gray-300);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
     .categories-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
-      margin-top: 20px;
     }
 
     .category-card {
       background: var(--vk-blue-light);
       border-radius: var(--radius-md);
       padding: 16px;
+    }
+
+    .category-card.ignored-card {
+      opacity: 0.6;
+      border: 1px dashed var(--vk-gray-500);
     }
 
     .category-card-header {
@@ -404,6 +437,11 @@
     .category-type.expense {
       background: rgba(239, 68, 68, 0.2);
       color: var(--vk-red);
+    }
+
+    .category-type.ignored {
+      background: rgba(100, 116, 139, 0.2);
+      color: var(--vk-gray-400);
     }
 
     .keywords-list {
@@ -494,19 +532,6 @@
       background: rgba(255,255,255,0.05);
     }
 
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--vk-gray-400);
-    }
-
-    .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.5;
-    }
-
     /* Add Category Form */
     .add-category-form {
       display: flex;
@@ -514,6 +539,7 @@
       margin-top: 20px;
       padding-top: 20px;
       border-top: 1px solid rgba(255,255,255,0.05);
+      flex-wrap: wrap;
     }
 
     .add-category-form input, .add-category-form select {
@@ -529,6 +555,55 @@
     .add-category-form input:focus, .add-category-form select:focus {
       outline: none;
       border-color: var(--vk-blue-accent);
+    }
+
+    /* Breakdown bars */
+    .breakdown-container {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .breakdown-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .breakdown-label {
+      width: 140px;
+      font-size: 13px;
+      color: var(--vk-gray-300);
+      flex-shrink: 0;
+    }
+
+    .breakdown-bar-container {
+      flex: 1;
+      height: 24px;
+      background: var(--vk-blue-light);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .breakdown-bar {
+      height: 100%;
+      transition: width 0.5s ease;
+    }
+
+    .breakdown-value {
+      width: 110px;
+      text-align: right;
+      font-weight: 600;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .breakdown-percent {
+      width: 50px;
+      text-align: right;
+      font-size: 12px;
+      color: var(--vk-gray-400);
+      flex-shrink: 0;
     }
 
     /* Scrollbar */
@@ -564,18 +639,30 @@
       animation: fadeIn 0.3s ease forwards;
     }
 
-    /* Category colors */
-    .cat-ventas { border-left: 3px solid #22c55e; }
-    .cat-otros-ingresos { border-left: 3px solid #10b981; }
-    .cat-publicidad { border-left: 3px solid #f97316; }
-    .cat-suscripciones { border-left: 3px solid #8b5cf6; }
-    .cat-proveedores { border-left: 3px solid #ec4899; }
-    .cat-impuestos { border-left: 3px solid #ef4444; }
-    .cat-creditos { border-left: 3px solid #f59e0b; }
-    .cat-comisiones { border-left: 3px solid #6366f1; }
-    .cat-retiro-socio { border-left: 3px solid #14b8a6; }
-    .cat-honorarios { border-left: 3px solid #06b6d4; }
-    .cat-otros-gastos { border-left: 3px solid #64748b; }
+    /* Responsive */
+    @media (max-width: 768px) {
+      .app-container {
+        padding: 16px;
+      }
+      
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .breakdown-row {
+        flex-wrap: wrap;
+      }
+      
+      .breakdown-label {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -589,14 +676,17 @@
           <div class="logo-subtitle">Virtual Keys SpA</div>
         </div>
       </div>
+      <div class="header-actions" id="header-actions" style="display: none;">
+        <button class="btn btn-ghost" onclick="resetApp()">📤 Cargar otra cartola</button>
+      </div>
     </header>
 
     <!-- Upload Zone -->
     <div class="upload-zone" id="upload-zone">
-      <div class="upload-icon">📄</div>
+      <div class="upload-icon">📊</div>
       <div class="upload-title">Arrastra tu archivo de cartola aquí</div>
-      <div class="upload-subtitle">o haz clic para seleccionar un archivo .txt del Banco Santander</div>
-      <input type="file" id="file-input" accept=".txt">
+      <div class="upload-subtitle">Archivo Excel (.xlsx) de Cartola Histórica del Banco Santander</div>
+      <input type="file" id="file-input" accept=".xlsx,.xls">
     </div>
 
     <!-- Main Content (hidden until file uploaded) -->
@@ -611,31 +701,41 @@
       <!-- Dashboard Tab -->
       <div id="tab-dashboard" class="tab-content">
         <!-- Summary Cards -->
-        <div class="summary-grid" id="summary-cards">
-          <!-- Populated by JS -->
-        </div>
+        <div class="summary-grid" id="summary-cards"></div>
 
         <!-- Charts -->
         <div class="charts-grid">
           <div class="chart-card">
-            <div class="chart-title">📈 Distribución de Gastos</div>
+            <div class="chart-title">💰 Ingresos por Medio de Pago</div>
+            <div class="chart-container">
+              <canvas id="income-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">📉 Distribución de Gastos</div>
             <div class="chart-container">
               <canvas id="expenses-chart"></canvas>
             </div>
           </div>
+        </div>
+
+        <!-- Breakdowns -->
+        <div class="charts-grid">
           <div class="chart-card">
-            <div class="chart-title">💰 Ingresos vs Gastos por Día</div>
-            <div class="chart-container">
-              <canvas id="daily-chart"></canvas>
-            </div>
+            <div class="chart-title">📊 Detalle de Ingresos</div>
+            <div id="income-breakdown" class="breakdown-container"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">📊 Detalle de Gastos</div>
+            <div id="expense-breakdown" class="breakdown-container"></div>
           </div>
         </div>
 
-        <!-- Category Breakdown -->
+        <!-- Daily Chart -->
         <div class="chart-card">
-          <div class="chart-title">📊 Detalle por Categoría</div>
-          <div id="category-breakdown">
-            <!-- Populated by JS -->
+          <div class="chart-title">📈 Flujo Diario (Ingresos vs Gastos)</div>
+          <div class="chart-container" style="height: 300px;">
+            <canvas id="daily-chart"></canvas>
           </div>
         </div>
       </div>
@@ -644,16 +744,16 @@
       <div id="tab-transactions" class="tab-content hidden">
         <div class="table-container">
           <div class="table-header">
-            <div class="table-title">Movimientos</div>
+            <div class="table-title" id="transactions-count">Movimientos</div>
             <div class="table-filters">
               <select class="filter-select" id="filter-type">
                 <option value="all">Todos</option>
                 <option value="income">Solo Ingresos</option>
                 <option value="expense">Solo Gastos</option>
+                <option value="ignored">Solo Ignorados</option>
               </select>
               <select class="filter-select" id="filter-category">
                 <option value="all">Todas las categorías</option>
-                <!-- Populated by JS -->
               </select>
             </div>
           </div>
@@ -667,9 +767,7 @@
                   <th>Categoría</th>
                 </tr>
               </thead>
-              <tbody id="transactions-body">
-                <!-- Populated by JS -->
-              </tbody>
+              <tbody id="transactions-body"></tbody>
             </table>
           </div>
         </div>
@@ -678,14 +776,28 @@
       <!-- Categories Tab -->
       <div id="tab-categories" class="tab-content hidden">
         <div class="categories-manager">
-          <div class="chart-title">🏷️ Gestionar Categorías y Reglas de Categorización</div>
+          <div class="chart-title">🏷️ Gestionar Categorías y Reglas</div>
           <p style="color: var(--vk-gray-400); font-size: 14px; margin-top: 8px;">
-            Agrega palabras clave para categorizar automáticamente las transacciones. 
-            Las transacciones que contengan estas palabras se asignarán a la categoría correspondiente.
+            Las transacciones se categorizan automáticamente según las palabras clave. 
+            Puedes agregar o eliminar palabras clave para ajustar la categorización.
           </p>
           
-          <div class="categories-grid" id="categories-grid">
-            <!-- Populated by JS -->
+          <!-- Income Categories -->
+          <div class="categories-section" style="margin-top: 24px;">
+            <div class="categories-section-title">💰 INGRESOS (Medios de Pago)</div>
+            <div class="categories-grid" id="income-categories-grid"></div>
+          </div>
+
+          <!-- Ignored Categories -->
+          <div class="categories-section">
+            <div class="categories-section-title">🚫 IGNORAR (No suma en totales)</div>
+            <div class="categories-grid" id="ignored-categories-grid"></div>
+          </div>
+
+          <!-- Expense Categories -->
+          <div class="categories-section">
+            <div class="categories-section-title">📉 GASTOS</div>
+            <div class="categories-grid" id="expense-categories-grid"></div>
           </div>
 
           <div class="add-category-form">
@@ -693,6 +805,7 @@
             <select id="new-category-type">
               <option value="expense">Gasto</option>
               <option value="income">Ingreso</option>
+              <option value="ignored">Ignorar</option>
             </select>
             <button class="btn btn-success" onclick="addCategory()">+ Agregar Categoría</button>
           </div>
@@ -708,101 +821,140 @@
     
     let transactions = [];
     let categories = {
-      // Ingresos
-      'Ventas': { type: 'income', keywords: ['FLOW S A', 'Transf. FLOW'], color: '#22c55e' },
-      'Otros Ingresos': { type: 'income', keywords: ['RADAR CHILE'], color: '#10b981' },
+      // Ingresos (medios de pago)
+      'Flow': { type: 'income', keywords: ['FLOW S A', 'Transf. FLOW'], color: '#22c55e' },
+      'Mercado Pago': { type: 'income', keywords: ['MERCADOPAGO', 'MP *MERCADOPAGO'], color: '#00bcff' },
+      'Transferencias': { type: 'income', keywords: ['RADAR CHILE'], color: '#10b981' },
+      
+      // Ignorar (reservas/movimientos internos)
+      'Reservas': { type: 'ignored', keywords: ['Transf. Virtual Key', 'Transf a Virtual Key', '0778392356'], color: '#64748b' },
       
       // Gastos
       'Publicidad': { type: 'expense', keywords: ['FACEBK', 'FACEBOOK'], color: '#f97316' },
-      'Suscripciones': { type: 'expense', keywords: ['CLAUDE.AI', 'CHATGPT', 'SHOPIFY', 'KLAVIYO', 'AIRTABLE', 'HEYGEN', 'ELEVENLABS', 'MIDJOURNEY', 'FREEPIK', 'REAMAZE', 'GOOGLE *Workspace', 'CapCut'], color: '#8b5cf6' },
+      'Suscripciones': { type: 'expense', keywords: ['CLAUDE.AI', 'CHATGPT', 'OPENAI', 'SHOPIFY', 'KLAVIYO', 'AIRTABLE', 'HEYGEN', 'ELEVENLABS', 'MIDJOURNEY', 'FREEPIK', 'REAMAZE', 'GOOGLE *Workspace', 'CapCut', 'ANTHROPIC'], color: '#8b5cf6' },
       'Proveedores': { type: 'expense', keywords: ['Alibaba', 'WESTERN UNION', 'SKR*Skrill', 'HYPERREALS'], color: '#ec4899' },
-      'Impuestos': { type: 'expense', keywords: ['S.I.I.', 'T.G.R.', 'PAGO EN LINEA'], color: '#ef4444' },
+      'Impuestos': { type: 'expense', keywords: ['S.I.I.', 'T.G.R.', 'PAGO EN LINEA T.G.R', 'PAGO EN LINEA S.I.I'], color: '#ef4444' },
       'Créditos': { type: 'expense', keywords: ['Cuota Crédito', 'Pago Cuota'], color: '#f59e0b' },
       'Comisiones Bancarias': { type: 'expense', keywords: ['MANTENCION PLAN', 'COM.MANTENCION'], color: '#6366f1' },
-      'Retiro Socio': { type: 'expense', keywords: ['Transf a Matias GAR', '0215719960'], color: '#14b8a6' },
+      'Retiro Socio': { type: 'expense', keywords: ['Transf a Matias', '0215719960'], color: '#14b8a6' },
       'Honorarios': { type: 'expense', keywords: ['Transf a Jhosep', 'Transf a Carolina', 'Transf a Isabel', 'Impulsah'], color: '#06b6d4' },
-      'Otros Gastos': { type: 'expense', keywords: ['MERCADOPAGO', 'MP *', 'COPEC', 'Cajero Automatico', 'ALMACEN', 'PLAZA MAIPU', 'SumUp', 'MINIMERCADO', 'ARAMCO', 'QUILICURA', 'PAGOWOM', 'ANTHROPIC'], color: '#64748b' }
+      'Otros Gastos': { type: 'expense', keywords: ['COPEC', 'Cajero Automatico', 'ALMACEN', 'PLAZA', 'SumUp', 'MINIMERCADO', 'ARAMCO', 'QUILICURA', 'PAGOWOM', 'MERCADOPAGO *', 'Compra MP *'], color: '#64748b' }
     };
 
-    // Charts instances
+    // Chart instances
+    let incomeChart = null;
     let expensesChart = null;
     let dailyChart = null;
 
     // ============================================
-    // FILE PARSING
+    // FILE PARSING (Excel)
     // ============================================
     
-    function parseCartolaFile(content) {
-      const lines = content.split('\n').filter(line => line.trim());
-      const parsedTransactions = [];
+    function parseExcelFile(data) {
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       
-      // Skip header line (first line with account info)
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (line.length < 50) continue;
+      const parsedTransactions = [];
+      let headerRowIndex = -1;
+      
+      // Find header row
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (row && row[0] === 'MONTO' && row[1] === 'DESCRIPCIÓN MOVIMIENTO') {
+          headerRowIndex = i;
+          break;
+        }
+      }
+      
+      if (headerRowIndex === -1) {
+        alert('No se encontró el formato esperado de cartola Santander');
+        return [];
+      }
+      
+      // Parse transactions starting after header
+      let id = 0;
+      for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || row.length < 8) continue;
         
-        // Parse Santander format
-        // Format: DDMM + Type + Code + Description + Amount + Branch
-        const day = line.substring(0, 2);
-        const month = line.substring(2, 4);
-        const typeCode = line.substring(4, 5); // A = Abono (income), C = Cargo (expense)
-        const description = line.substring(10, 40).trim();
-        const amountStr = line.substring(40, 60).replace(/\D/g, '');
+        const monto = row[0];
+        const descripcion = row[1];
+        const fecha = row[3];
+        const cargoAbono = row[7];
         
-        if (!amountStr || amountStr === '0') continue;
+        // Skip non-transaction rows
+        if (cargoAbono !== 'A' && cargoAbono !== 'C') continue;
+        if (typeof monto !== 'number') continue;
         
-        const amount = parseInt(amountStr) / 100; // Amounts are in cents
-        const isIncome = typeCode === 'A';
-        const date = `2026-01-${day.padStart(2, '0')}`;
+        const amount = Math.abs(monto);
+        const isIncome = cargoAbono === 'A';
+        
+        // Parse date
+        let dateStr = '';
+        let dateObj = null;
+        if (fecha) {
+          if (typeof fecha === 'number') {
+            // Excel date serial
+            dateObj = new Date((fecha - 25569) * 86400 * 1000);
+          } else if (typeof fecha === 'string') {
+            // DD/MM/YYYY format
+            const parts = fecha.split('/');
+            if (parts.length === 3) {
+              dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+          }
+          if (dateObj) {
+            dateStr = dateObj.toISOString().split('T')[0];
+          }
+        }
+        
+        const category = categorizeTransaction(descripcion, isIncome);
+        const type = categories[category]?.type || (isIncome ? 'income' : 'expense');
         
         parsedTransactions.push({
-          id: i,
-          date: date,
-          day: parseInt(day),
-          description: description,
+          id: id++,
+          date: dateStr,
+          dateObj: dateObj,
+          description: descripcion || '',
           amount: amount,
-          type: isIncome ? 'income' : 'expense',
-          category: categorizeTransaction(description, isIncome),
-          rawLine: line
+          type: type,
+          originalType: isIncome ? 'income' : 'expense',
+          category: category
         });
       }
       
-      return parsedTransactions.sort((a, b) => b.day - a.day);
+      return parsedTransactions.sort((a, b) => b.dateObj - a.dateObj);
     }
 
     function categorizeTransaction(description, isIncome) {
+      if (!description) return isIncome ? 'Transferencias' : 'Otros Gastos';
+      
       const descUpper = description.toUpperCase();
       
+      // Check all categories for keyword match
       for (const [category, config] of Object.entries(categories)) {
-        if (config.type === (isIncome ? 'income' : 'expense')) {
-          for (const keyword of config.keywords) {
-            if (descUpper.includes(keyword.toUpperCase())) {
-              return category;
-            }
+        for (const keyword of config.keywords) {
+          if (descUpper.includes(keyword.toUpperCase())) {
+            return category;
           }
         }
       }
       
-      // Default categories
+      // Defaults
       if (isIncome) {
-        if (descUpper.includes('TRANSF') && descUpper.includes('VIRTUAL KEY')) {
-          return 'Ventas';
-        }
-        return 'Otros Ingresos';
+        return 'Transferencias';
       }
-      
-      if (descUpper.includes('TRANSF') && descUpper.includes('VIRTUAL KE')) {
-        return 'Otros Gastos'; // Internal transfer
-      }
-      
       return 'Otros Gastos';
     }
 
     function recategorizeAll() {
-      transactions = transactions.map(t => ({
-        ...t,
-        category: categorizeTransaction(t.description, t.type === 'income')
-      }));
+      transactions = transactions.map(t => {
+        const category = categorizeTransaction(t.description, t.originalType === 'income');
+        const type = categories[category]?.type || t.originalType;
+        return { ...t, category, type };
+      });
       renderAll();
     }
 
@@ -819,6 +971,7 @@
     }
 
     function renderSummary() {
+      // Calculate totals (excluding ignored)
       const totalIncome = transactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
@@ -827,8 +980,12 @@
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
       
+      const totalIgnored = transactions
+        .filter(t => t.type === 'ignored')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
       const balance = totalIncome - totalExpenses;
-      const transactionCount = transactions.length;
+      const transactionCount = transactions.filter(t => t.type !== 'ignored').length;
 
       document.getElementById('summary-cards').innerHTML = `
         <div class="summary-card animate-in">
@@ -847,35 +1004,47 @@
           <div class="summary-card-label">Transacciones</div>
           <div class="summary-card-value balance">${transactionCount}</div>
         </div>
-      `;
-
-      // Category breakdown
-      const expensesByCategory = {};
-      transactions.filter(t => t.type === 'expense').forEach(t => {
-        expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
-      });
-
-      const sortedCategories = Object.entries(expensesByCategory)
-        .sort((a, b) => b[1] - a[1]);
-
-      document.getElementById('category-breakdown').innerHTML = `
-        <div style="display: grid; gap: 12px; margin-top: 16px;">
-          ${sortedCategories.map(([cat, amount]) => {
-            const percentage = (amount / totalExpenses * 100).toFixed(1);
-            const color = categories[cat]?.color || '#64748b';
-            return `
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 120px; font-size: 13px; color: var(--vk-gray-300);">${cat}</div>
-                <div style="flex: 1; height: 24px; background: var(--vk-blue-light); border-radius: 4px; overflow: hidden;">
-                  <div style="width: ${percentage}%; height: 100%; background: ${color}; transition: width 0.5s ease;"></div>
-                </div>
-                <div style="width: 100px; text-align: right; font-weight: 600; font-size: 13px;">$${formatNumber(amount)}</div>
-                <div style="width: 50px; text-align: right; font-size: 12px; color: var(--vk-gray-400);">${percentage}%</div>
-              </div>
-            `;
-          }).join('')}
+        <div class="summary-card animate-in" style="animation-delay: 0.4s">
+          <div class="summary-card-label">Ignorados (Reservas)</div>
+          <div class="summary-card-value neutral">$${formatNumber(totalIgnored)}</div>
         </div>
       `;
+
+      // Income breakdown
+      renderBreakdown('income-breakdown', 'income', totalIncome);
+      
+      // Expense breakdown
+      renderBreakdown('expense-breakdown', 'expense', totalExpenses);
+    }
+
+    function renderBreakdown(containerId, type, total) {
+      const byCategory = {};
+      transactions.filter(t => t.type === type).forEach(t => {
+        byCategory[t.category] = (byCategory[t.category] || 0) + t.amount;
+      });
+
+      const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+      const container = document.getElementById(containerId);
+      
+      if (sorted.length === 0) {
+        container.innerHTML = '<p style="color: var(--vk-gray-500); text-align: center; padding: 20px;">Sin movimientos</p>';
+        return;
+      }
+
+      container.innerHTML = sorted.map(([cat, amount]) => {
+        const percentage = total > 0 ? (amount / total * 100).toFixed(1) : 0;
+        const color = categories[cat]?.color || '#64748b';
+        return `
+          <div class="breakdown-row">
+            <div class="breakdown-label">${cat}</div>
+            <div class="breakdown-bar-container">
+              <div class="breakdown-bar" style="width: ${percentage}%; background: ${color};"></div>
+            </div>
+            <div class="breakdown-value">$${formatNumber(amount)}</div>
+            <div class="breakdown-percent">${percentage}%</div>
+          </div>
+        `;
+      }).join('');
     }
 
     function renderTransactions() {
@@ -892,68 +1061,140 @@
         filtered = filtered.filter(t => t.category === filterCategory);
       }
 
+      document.getElementById('transactions-count').textContent = 
+        `Movimientos (${filtered.length} de ${transactions.length})`;
+
       const tbody = document.getElementById('transactions-body');
-      tbody.innerHTML = filtered.map(t => `
-        <tr>
-          <td style="white-space: nowrap;">${formatDate(t.date)}</td>
-          <td>${t.description}</td>
-          <td class="${t.type === 'income' ? 'amount-positive' : 'amount-negative'}">
-            ${t.type === 'income' ? '+' : '-'}$${formatNumber(t.amount)}
-          </td>
-          <td>
-            <select class="category-select" onchange="updateTransactionCategory(${t.id}, this.value)">
-              ${Object.entries(categories)
-                .filter(([_, config]) => config.type === t.type)
-                .map(([cat, _]) => `
-                  <option value="${cat}" ${t.category === cat ? 'selected' : ''}>${cat}</option>
-                `).join('')}
-            </select>
-          </td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = filtered.map(t => {
+        const isIgnored = t.type === 'ignored';
+        const amountClass = isIgnored ? 'amount-ignored' : 
+          (t.originalType === 'income' ? 'amount-positive' : 'amount-negative');
+        const rowClass = isIgnored ? 'ignored' : '';
+        const sign = t.originalType === 'income' ? '+' : '-';
+        
+        return `
+          <tr class="${rowClass}">
+            <td style="white-space: nowrap;">${formatDate(t.date)}</td>
+            <td>${t.description}</td>
+            <td class="${amountClass}">
+              ${sign}$${formatNumber(t.amount)}
+            </td>
+            <td>
+              <select class="category-select ${isIgnored ? 'ignored' : ''}" 
+                      onchange="updateTransactionCategory(${t.id}, this.value)">
+                ${getCategoryOptions(t)}
+              </select>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function getCategoryOptions(transaction) {
+      const relevantCategories = Object.entries(categories)
+        .filter(([_, config]) => {
+          // Show income categories for income transactions
+          // Show expense/ignored for expense transactions
+          if (transaction.originalType === 'income') {
+            return config.type === 'income' || config.type === 'ignored';
+          } else {
+            return config.type === 'expense' || config.type === 'ignored';
+          }
+        });
+      
+      return relevantCategories.map(([cat, _]) => 
+        `<option value="${cat}" ${transaction.category === cat ? 'selected' : ''}>${cat}</option>`
+      ).join('');
     }
 
     function renderCategories() {
-      const grid = document.getElementById('categories-grid');
-      grid.innerHTML = Object.entries(categories).map(([name, config]) => `
-        <div class="category-card" style="border-left: 3px solid ${config.color};">
-          <div class="category-card-header">
-            <div class="category-name">
-              <span>${name}</span>
+      const incomeGrid = document.getElementById('income-categories-grid');
+      const expenseGrid = document.getElementById('expense-categories-grid');
+      const ignoredGrid = document.getElementById('ignored-categories-grid');
+      
+      incomeGrid.innerHTML = renderCategoryCards('income');
+      expenseGrid.innerHTML = renderCategoryCards('expense');
+      ignoredGrid.innerHTML = renderCategoryCards('ignored');
+    }
+
+    function renderCategoryCards(type) {
+      return Object.entries(categories)
+        .filter(([_, config]) => config.type === type)
+        .map(([name, config]) => `
+          <div class="category-card ${type === 'ignored' ? 'ignored-card' : ''}" 
+               style="border-left: 3px solid ${config.color};">
+            <div class="category-card-header">
+              <div class="category-name">${name}</div>
+              <span class="category-type ${type}">${type === 'income' ? 'Ingreso' : type === 'expense' ? 'Gasto' : 'Ignorar'}</span>
             </div>
-            <span class="category-type ${config.type}">${config.type === 'income' ? 'Ingreso' : 'Gasto'}</span>
+            <div class="keywords-list">
+              ${config.keywords.map((kw, idx) => `
+                <span class="keyword-tag">
+                  ${kw}
+                  <span class="keyword-remove" onclick="removeKeyword('${name}', ${idx})">✕</span>
+                </span>
+              `).join('')}
+            </div>
+            <div class="add-keyword">
+              <input type="text" placeholder="Nueva palabra clave..." 
+                     id="keyword-input-${name.replace(/\s/g, '-')}"
+                     onkeypress="if(event.key==='Enter')addKeyword('${name}')">
+              <button class="btn btn-primary" onclick="addKeyword('${name}')">+</button>
+            </div>
           </div>
-          <div class="keywords-list">
-            ${config.keywords.map((kw, idx) => `
-              <span class="keyword-tag">
-                ${kw}
-                <span class="keyword-remove" onclick="removeKeyword('${name}', ${idx})">✕</span>
-              </span>
-            `).join('')}
-          </div>
-          <div class="add-keyword">
-            <input type="text" placeholder="Nueva palabra clave..." id="keyword-input-${name.replace(/\s/g, '-')}">
-            <button class="btn btn-primary" onclick="addKeyword('${name}')">+</button>
-          </div>
-        </div>
-      `).join('');
+        `).join('');
     }
 
     function renderCharts() {
+      // Income by category chart
+      const incomeByCategory = {};
+      transactions.filter(t => t.type === 'income').forEach(t => {
+        incomeByCategory[t.category] = (incomeByCategory[t.category] || 0) + t.amount;
+      });
+
+      const sortedIncome = Object.entries(incomeByCategory).sort((a, b) => b[1] - a[1]);
+
+      if (incomeChart) incomeChart.destroy();
+      
+      const ctx1 = document.getElementById('income-chart').getContext('2d');
+      incomeChart = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+          labels: sortedIncome.map(([cat]) => cat),
+          datasets: [{
+            data: sortedIncome.map(([_, amount]) => amount),
+            backgroundColor: sortedIncome.map(([cat]) => categories[cat]?.color || '#22c55e'),
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                color: '#94a3b8',
+                font: { family: 'Plus Jakarta Sans', size: 11 },
+                padding: 12
+              }
+            }
+          }
+        }
+      });
+
       // Expenses by category chart
       const expensesByCategory = {};
       transactions.filter(t => t.type === 'expense').forEach(t => {
         expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
       });
 
-      const sortedExpenses = Object.entries(expensesByCategory)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8);
+      const sortedExpenses = Object.entries(expensesByCategory).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
       if (expensesChart) expensesChart.destroy();
       
-      const ctx1 = document.getElementById('expenses-chart').getContext('2d');
-      expensesChart = new Chart(ctx1, {
+      const ctx2 = document.getElementById('expenses-chart').getContext('2d');
+      expensesChart = new Chart(ctx2, {
         type: 'doughnut',
         data: {
           labels: sortedExpenses.map(([cat]) => cat),
@@ -979,34 +1220,35 @@
         }
       });
 
-      // Daily income vs expenses chart
+      // Daily chart (excluding ignored)
       const dailyData = {};
-      transactions.forEach(t => {
-        if (!dailyData[t.day]) {
-          dailyData[t.day] = { income: 0, expense: 0 };
+      transactions.filter(t => t.type !== 'ignored').forEach(t => {
+        if (!t.date) return;
+        if (!dailyData[t.date]) {
+          dailyData[t.date] = { income: 0, expense: 0 };
         }
-        dailyData[t.day][t.type] += t.amount;
+        dailyData[t.date][t.type] += t.amount;
       });
 
-      const days = Object.keys(dailyData).map(Number).sort((a, b) => a - b);
+      const dates = Object.keys(dailyData).sort();
 
       if (dailyChart) dailyChart.destroy();
       
-      const ctx2 = document.getElementById('daily-chart').getContext('2d');
-      dailyChart = new Chart(ctx2, {
+      const ctx3 = document.getElementById('daily-chart').getContext('2d');
+      dailyChart = new Chart(ctx3, {
         type: 'bar',
         data: {
-          labels: days.map(d => `${d} Ene`),
+          labels: dates.map(d => formatDate(d)),
           datasets: [
             {
               label: 'Ingresos',
-              data: days.map(d => dailyData[d].income),
+              data: dates.map(d => dailyData[d].income),
               backgroundColor: '#22c55e',
               borderRadius: 4
             },
             {
               label: 'Gastos',
-              data: days.map(d => dailyData[d].expense),
+              data: dates.map(d => dailyData[d].expense),
               backgroundColor: '#ef4444',
               borderRadius: 4
             }
@@ -1018,7 +1260,7 @@
           scales: {
             x: {
               grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { color: '#94a3b8', font: { size: 10 } }
+              ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 45 }
             },
             y: {
               grid: { color: 'rgba(255,255,255,0.05)' },
@@ -1044,8 +1286,10 @@
       const select = document.getElementById('filter-category');
       const currentValue = select.value;
       
+      const usedCategories = [...new Set(transactions.map(t => t.category))];
+      
       select.innerHTML = '<option value="all">Todas las categorías</option>' +
-        Object.keys(categories).map(cat => 
+        usedCategories.sort().map(cat => 
           `<option value="${cat}" ${currentValue === cat ? 'selected' : ''}>${cat}</option>`
         ).join('');
     }
@@ -1058,8 +1302,8 @@
       const transaction = transactions.find(t => t.id === id);
       if (transaction) {
         transaction.category = newCategory;
-        renderSummary();
-        renderCharts();
+        transaction.type = categories[newCategory]?.type || transaction.originalType;
+        renderAll();
       }
     }
 
@@ -1090,14 +1334,21 @@
       const type = typeSelect.value;
       
       if (name && !categories[name]) {
-        // Generate a random color
-        const colors = ['#f97316', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f59e0b'];
+        const colors = ['#f97316', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f59e0b', '#14b8a6'];
         const color = colors[Object.keys(categories).length % colors.length];
         
         categories[name] = { type, keywords: [], color };
         nameInput.value = '';
         recategorizeAll();
       }
+    }
+
+    function resetApp() {
+      transactions = [];
+      document.getElementById('upload-zone').classList.remove('hidden');
+      document.getElementById('main-content').classList.add('hidden');
+      document.getElementById('header-actions').style.display = 'none';
+      document.getElementById('file-input').value = '';
     }
 
     // ============================================
@@ -1109,6 +1360,7 @@
     }
 
     function formatDate(dateStr) {
+      if (!dateStr) return '-';
       const [year, month, day] = dateStr.split('-');
       const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
       return `${parseInt(day)} ${months[parseInt(month) - 1]}`;
@@ -1118,7 +1370,6 @@
     // EVENT HANDLERS
     // ============================================
     
-    // File upload
     const uploadZone = document.getElementById('upload-zone');
     const fileInput = document.getElementById('file-input');
 
@@ -1132,7 +1383,7 @@
     uploadZone.addEventListener('dragleave', () => {
       uploadZone.classList.remove('dragover');
     });
-    
+
     uploadZone.addEventListener('drop', (e) => {
       e.preventDefault();
       uploadZone.classList.remove('dragover');
@@ -1148,18 +1399,19 @@
     function handleFile(file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const content = e.target.result;
-        transactions = parseCartolaFile(content);
+        const data = new Uint8Array(e.target.result);
+        transactions = parseExcelFile(data);
         
         if (transactions.length > 0) {
           uploadZone.classList.add('hidden');
           document.getElementById('main-content').classList.remove('hidden');
+          document.getElementById('header-actions').style.display = 'flex';
           renderAll();
         } else {
-          alert('No se pudieron extraer transacciones del archivo. Verifica que sea un archivo de cartola del Banco Santander.');
+          alert('No se pudieron extraer transacciones del archivo. Verifica que sea un archivo de cartola histórica del Banco Santander.');
         }
       };
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
     }
 
     // Tabs
