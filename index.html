@@ -102,7 +102,7 @@
 
     .upload-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-    #file-input, #file-input-2, #file-input-config { display: none; }
+    #file-input, #file-input-2, #file-input-csv, #file-input-config { display: none; }
 
     .tabs {
       display: flex; gap: 8px; margin-bottom: 24px;
@@ -572,10 +572,12 @@
       <div class="upload-title">Arrastra tu archivo de cartola aquí</div>
       <div class="upload-subtitle">Archivo Excel (.xlsx) de Cartola Histórica del Banco Santander</div>
       <div class="upload-buttons">
-        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">📄 Cargar 1 cartola</button>
+        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">📄 Cargar cartola (.xlsx)</button>
+        <button class="btn btn-success" onclick="document.getElementById('file-input-csv').click()">📥 Cargar CSV exportado</button>
         <button class="btn btn-ghost" onclick="document.getElementById('file-input-2').click()">📊 Comparar 2 cartolas</button>
       </div>
       <input type="file" id="file-input" accept=".xlsx,.xls">
+      <input type="file" id="file-input-csv" accept=".csv">
       <input type="file" id="file-input-2" accept=".xlsx,.xls" multiple>
     </div>
 
@@ -1047,6 +1049,7 @@
       document.getElementById('comparison-banner').classList.add('hidden');
       document.getElementById('comparison-summary').classList.add('hidden');
       document.getElementById('file-input').value = '';
+      document.getElementById('file-input-csv').value = '';
       document.getElementById('file-input-2').value = '';
       document.getElementById('search-input').value = '';
       document.getElementById('filter-type').value = 'all';
@@ -1076,6 +1079,95 @@
     });
 
     fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleSingleFile(e.target.files[0]); });
+
+    const fileInputCSV = document.getElementById('file-input-csv');
+    fileInputCSV.addEventListener('change', (e) => { if (e.target.files[0]) handleCSVFile(e.target.files[0]); });
+
+    function handleCSVFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
+        transactions = parseCSVFile(content, file.name);
+        fileNames = [file.name]; isComparing = false;
+        if (transactions.length > 0) {
+          uploadZone.classList.add('hidden');
+          document.getElementById('main-content').classList.remove('hidden');
+          document.getElementById('header-actions').style.display = 'flex';
+          renderAll();
+        } else alert('No se encontraron transacciones en el archivo CSV.');
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCSVFile(content, fileName) {
+      const lines = content.split('\n').filter(line => line.trim());
+      if (lines.length < 2) return [];
+      
+      const headers = lines[0].split(',').map(h => h.trim());
+      const hasOrigin = headers[0] === 'Origen';
+      const parsed = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        // Parse CSV line handling quoted fields
+        const row = [];
+        let current = '';
+        let inQuotes = false;
+        const line = lines[i];
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            row.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        row.push(current.trim());
+        
+        if (row.length < 5) continue;
+        
+        const offset = hasOrigin ? 1 : 0;
+        const dateStr = row[offset];
+        const description = row[offset + 1].replace(/^"|"$/g, '');
+        const monto = parseFloat(row[offset + 2]);
+        const cargoAbono = row[offset + 3];
+        const category = row[offset + 4] === 'Sin categorizar' ? null : row[offset + 4];
+        
+        if (isNaN(monto)) continue;
+        
+        const isIncome = monto > 0;
+        const amount = Math.abs(monto);
+        
+        let dateObj = null;
+        if (dateStr) {
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+          }
+        }
+        
+        const type = category ? (categories[category]?.type || (isIncome ? 'income' : 'expense')) : (isIncome ? 'income' : 'expense');
+        
+        parsed.push({
+          id: i,
+          date: dateStr,
+          dateObj,
+          description,
+          amount,
+          type,
+          originalType: isIncome ? 'income' : 'expense',
+          cargoAbono: isIncome ? 'Abono' : 'Cargo',
+          category,
+          source: 0,
+          fileName
+        });
+      }
+      
+      return parsed.sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
+    }
 
     fileInput2.addEventListener('change', (e) => {
       const files = Array.from(e.target.files);
